@@ -2,7 +2,7 @@
 using Polly.Extensions.Http;
 using System.Net;
 
-namespace CurrencyConverterAPI
+namespace CurrencyConverterAPI.Policies
 {
     public static class RetryPolicy
     {

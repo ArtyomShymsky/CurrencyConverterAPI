@@ -1,7 +1,9 @@
 ﻿using CurrencyConverterAPI.DTOs;
+using CurrencyConverterAPI.Intefaces;
 using CurrencyConverterAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Polly.CircuitBreaker;
 
 namespace CurrencyConverterAPI.Controllers
 {
@@ -9,8 +11,8 @@ namespace CurrencyConverterAPI.Controllers
     [Route("[controller]")]
     public class CurrencyRatesController : ControllerBase
     {
-        private readonly CurrencyRateService _service;
-        public CurrencyRatesController(CurrencyRateService service)
+        private readonly ICurrencyRateService _service;
+        public CurrencyRatesController(ICurrencyRateService service)
         {
             _service = service;
         }
@@ -18,13 +20,22 @@ namespace CurrencyConverterAPI.Controllers
         [HttpGet("latest")]
         public async Task<IActionResult> GetLatestRates([FromQuery] string from = "USD")
         {
+            try
+            {
+                var result = await _service.GetLatestRatesAsync(from);
+                if (result == null)
+                    return NotFound("Unable to retrieve latest currency rates.");
 
-            var result = await _service.GetLatestRatesAsync(from);
-            if (result == null)
-                return BadRequest("Invalid base currency or no data found.");
-
-
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (BrokenCircuitException)
+            {
+                return StatusCode(503, "Service temporarily unavailable (circuit breaker open).");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Unexpected error: {ex.Message}");
+            }
         }
 
         [HttpGet("history")]
@@ -64,11 +75,6 @@ namespace CurrencyConverterAPI.Controllers
 
             return Ok(response);
         }
-
-
-
-
-
 
     }
 }

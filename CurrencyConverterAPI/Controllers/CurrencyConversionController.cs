@@ -17,7 +17,7 @@ namespace CurrencyConverterAPI.Controllers
         }
 
 
-        [HttpGet("Exchange")]
+        [HttpGet("exchange")]
         public async Task<IActionResult> GetExchangeRate([FromQuery] string from = "USD", [FromQuery] string to = "EUR")
         {
             if(_excludedCurrencys.Contains(from) || _excludedCurrencys.Contains(to))

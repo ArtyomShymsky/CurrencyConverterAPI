@@ -1,4 +1,5 @@
-using CurrencyConverterAPI;
+using CurrencyConverterAPI.Intefaces;
+using CurrencyConverterAPI.Policies;
 using CurrencyConverterAPI.Services;
 using Polly;
 using Polly.Extensions.Http;
@@ -14,12 +15,12 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient("Frankfurter", client =>
 {
     client.BaseAddress = new Uri("https://api.frankfurter.app/");
-}).AddPolicyHandler(RetryPolicy.GetRetryPolicy())
+})
+.AddPolicyHandler(RetryPolicy.GetRetryPolicy())
 .AddPolicyHandler(CircuitBreakerPolicy.GetCircuitBreakerPolicy());
-; 
 
-builder.Services.AddScoped<ExchangeService>();
-builder.Services.AddScoped<CurrencyRateService>();
+builder.Services.AddScoped<ICurrencyConversionService, ExchangeService>();
+builder.Services.AddScoped<ICurrencyRateService, CurrencyRateService>();
 
 var app = builder.Build();
 

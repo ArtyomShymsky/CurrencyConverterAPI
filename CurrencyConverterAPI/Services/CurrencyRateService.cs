@@ -1,10 +1,11 @@
 ﻿using CurrencyConverterAPI.DTOs;
+using CurrencyConverterAPI.Intefaces;
 using Microsoft.Extensions.Caching.Memory;
 using System.Text.Json;
 
 namespace CurrencyConverterAPI.Services
 {
-    public class CurrencyRateService
+    public class CurrencyRateService : ICurrencyRateService
     {
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;

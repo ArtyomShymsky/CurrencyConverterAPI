@@ -1,31 +1,11 @@
 ﻿using CurrencyConverterAPI.DTOs;
+using CurrencyConverterAPI.Intefaces;
 using Microsoft.Extensions.Caching.Memory;
 using System.Text.Json;
 
 namespace CurrencyConverterAPI.Services
 {
-    //public class ExchangeService
-    //{
-    //    private readonly HttpClient _httpClient;
-
-    //    public ExchangeService(IHttpClientFactory factory)
-    //    {
-    //        _httpClient = factory.CreateClient("Frankfurter");
-    //    }
-
-    //    public async Task<ExchangeRateResponse> GetRatesAsync(string from, string to)
-    //    {
-    //        var response = await _httpClient.GetAsync($"latest?from={from}&to={to}");
-    //        response.EnsureSuccessStatusCode();
-
-    //        var content = await response.Content.ReadAsStringAsync();
-    //        return JsonSerializer.Deserialize<ExchangeRateResponse>(content, new JsonSerializerOptions
-    //        {
-    //            PropertyNameCaseInsensitive = true
-    //        });
-    //    }
-    //}
-    public class ExchangeService
+    public class ExchangeService: ICurrencyConversionService
     {
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;

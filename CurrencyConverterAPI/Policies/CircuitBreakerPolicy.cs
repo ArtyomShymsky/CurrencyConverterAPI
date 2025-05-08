@@ -1,7 +1,7 @@
 ﻿using Polly.Extensions.Http;
 using Polly;
 
-namespace CurrencyConverterAPI
+namespace CurrencyConverterAPI.Policies
 {
     public static class CircuitBreakerPolicy
     {
