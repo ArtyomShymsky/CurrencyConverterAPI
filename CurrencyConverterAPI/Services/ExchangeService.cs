@@ -27,7 +27,6 @@ namespace CurrencyConverterAPI.Services
 
             var response = await _httpClient.GetAsync($"latest?from={from}&to={to}");
             response.EnsureSuccessStatusCode();
-
             var content = await response.Content.ReadAsStringAsync();
             var rate = JsonSerializer.Deserialize<ExchangeRateResponse>(content, new JsonSerializerOptions
             {

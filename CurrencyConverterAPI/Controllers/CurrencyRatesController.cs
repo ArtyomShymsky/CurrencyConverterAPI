@@ -1,4 +1,5 @@
-﻿using CurrencyConverterAPI.DTOs;
+﻿using Asp.Versioning;
+using CurrencyConverterAPI.DTOs;
 using CurrencyConverterAPI.Intefaces;
 using CurrencyConverterAPI.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,8 @@ using Polly.CircuitBreaker;
 namespace CurrencyConverterAPI.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiVersion("1.0")]
     public class CurrencyRatesController : ControllerBase
     {
         private readonly ICurrencyRateService _service;
@@ -18,6 +20,7 @@ namespace CurrencyConverterAPI.Controllers
         }
 
         [HttpGet("latest")]
+        [MapToApiVersion("1.0")]
         public async Task<IActionResult> GetLatestRates([FromQuery] string from = "USD")
         {
             try
@@ -39,6 +42,7 @@ namespace CurrencyConverterAPI.Controllers
         }
 
         [HttpGet("history")]
+        [MapToApiVersion("1.0")]
         public async Task<IActionResult> GetHistoricalRates(
         [FromQuery] string from = "USD",
         [FromQuery] DateOnly? start = null,
