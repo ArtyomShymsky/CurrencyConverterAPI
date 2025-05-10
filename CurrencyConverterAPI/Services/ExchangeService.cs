@@ -1,5 +1,6 @@
 ﻿using CurrencyConverterAPI.DTOs;
 using CurrencyConverterAPI.Intefaces;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using System.Text.Json;
 
@@ -38,6 +39,45 @@ namespace CurrencyConverterAPI.Services
 
             return rate;
         }
+
+        public async Task<decimal?> ConvertCurrency(decimal amount, string from, string to)
+        {
+            string cacheKey = $"{amount}-{from}-{to}";
+
+            if (_cache.TryGetValue(cacheKey, out decimal cachedResult))
+            {
+                return cachedResult;
+            }
+
+            try
+            {
+                string url = $"https://api.frankfurter.app/latest?amount={amount}&from={from}&to={to}";
+                HttpResponseMessage response = await _httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+
+                string json = await response.Content.ReadAsStringAsync();
+                using JsonDocument doc = JsonDocument.Parse(json);
+                JsonElement rates = doc.RootElement.GetProperty("rates");
+
+                if (rates.TryGetProperty(to, out JsonElement rateElement))
+                {
+                    decimal result = rateElement.GetDecimal();
+
+                    // Cache the result for 10 minutes
+                    _cache.Set(cacheKey, result, TimeSpan.FromMinutes(10));
+
+                    return result;
+                }
+
+                return null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+
     }
 
 }

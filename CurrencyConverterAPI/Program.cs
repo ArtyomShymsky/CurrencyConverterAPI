@@ -13,6 +13,7 @@ using OpenTelemetry.Trace;
 using Polly;
 using Polly.Extensions.Http;
 using Serilog;
+using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -28,6 +29,7 @@ builder.Services.AddHttpClient("Frankfurter", client =>
 })
 .AddPolicyHandler(RetryPolicy.GetRetryPolicy())
 .AddPolicyHandler(CircuitBreakerPolicy.GetCircuitBreakerPolicy());
+builder.Services.AddSingleton<JwtTokenService>();
 
 builder.Services.AddScoped<ICurrencyConversionService, ExchangeService>();
 builder.Services.AddScoped<ICurrencyRateService, CurrencyRateService>();
@@ -37,13 +39,12 @@ builder.Services.AddApiVersioning(options =>
     options.DefaultApiVersion = new ApiVersion(1, 0);
     options.AssumeDefaultVersionWhenUnspecified = true;
     options.ReportApiVersions = true;
-    options.ApiVersionReader = new HeaderApiVersionReader("api-version");
+    //options.ApiVersionReader = new HeaderApiVersionReader("api-version");
 
-    options.ApiVersionReader = ApiVersionReader.Combine(
-        new UrlSegmentApiVersionReader(),
-        new HeaderApiVersionReader("X-Api-Version")
-    )
-    ;
+    //options.ApiVersionReader = ApiVersionReader.Combine(
+    //    new UrlSegmentApiVersionReader(),
+    //    new HeaderApiVersionReader("X-Api-Version")
+    //);
 })
 .AddMvc()
 .AddApiExplorer(options =>
@@ -56,6 +57,28 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "API", Version = "v1" });
     //options.SwaggerDoc("v2", new OpenApiInfo { Title = "Currency API", Version = "v2" });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter: Bearer <your JWT token>"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>()
+        }
+    });
+
 });
 
 builder.Logging.AddOpenTelemetry(options =>
@@ -77,33 +100,46 @@ builder.Services.AddOpenTelemetry()
           .AddConsoleExporter());
 
 
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["Secret"];
 
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            // Set issuer and audience here
-        };
-    });
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+    };
+    //options.Events = new JwtBearerEvents
+    //{
+    //    OnChallenge = context =>
+    //    {
+    //        // Avoid default behavior
+    //        context.HandleResponse();
 
-//builder.Services.ConfigureOpenTelemetryTracerProvider(builder =>
-//{
-//    builder
-//        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("MyAspNetService"))
-//        .AddAspNetCoreInstrumentation(); // Automatic instrumentation for ASP.NET Core
-//       // .AddHttpClientInstrumentation() // Automatically instrument HTTP client requests
-//        //.AddJaegerExporter(options =>
-//        //{
-//        //    options.AgentHost = "localhost";  // Jaeger agent host
-//        //    options.AgentPort = 6831; // Default Jaeger port
-//        //});
-//});
+    //        context.Response.StatusCode = 401;
+    //        context.Response.Headers.Append("WWW-Authenticate", $"Bearer realm=\"yourapp\", error=\"invalid_token\", error_description=\"{context.ErrorDescription}\"");
+    //        return context.Response.WriteAsync("Unauthorized: Token is invalid or missing");
+    //    }
+    //};
+
+
+});
+
+
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console() // Optionally log to console
@@ -130,6 +166,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

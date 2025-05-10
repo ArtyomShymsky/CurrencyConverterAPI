@@ -2,12 +2,14 @@
 using CurrencyConverterAPI.DTOs;
 using CurrencyConverterAPI.Intefaces;
 using CurrencyConverterAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Polly.CircuitBreaker;
 
 namespace CurrencyConverterAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
@@ -19,10 +21,13 @@ namespace CurrencyConverterAPI.Controllers
             _service = service;
         }
 
+        [Authorize]
         [HttpGet("latest")]
         [MapToApiVersion("1.0")]
         public async Task<IActionResult> GetLatestRates([FromQuery] string from = "USD")
         {
+            var username = User.Identity?.Name;
+
             try
             {
                 var result = await _service.GetLatestRatesAsync(from);
@@ -41,6 +46,7 @@ namespace CurrencyConverterAPI.Controllers
             }
         }
 
+        [Authorize]
         [HttpGet("history")]
         [MapToApiVersion("1.0")]
         public async Task<IActionResult> GetHistoricalRates(
